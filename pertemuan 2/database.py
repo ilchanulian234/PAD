@@ -1,63 +1,82 @@
 import sqlite3
 import os
+from datetime import datetime
 
-DATABASE_NAME = "sistem_absensi.db"
+DATABASE_NAME = "absensi.db"
 
 def get_connection():
-    """Membuat dan mengembalikan koneksi ke database SQLite."""
+    """Get database connection"""
     conn = sqlite3.connect(DATABASE_NAME)
-    # Mengembalikan hasil query dalam bentuk dictionary (bukan tuple) agar mudah dibaca di Controller
     conn.row_factory = sqlite3.Row
     return conn
 
 def init_database():
-    """Membuat tabel-tabel utama jika belum ada (Skema Database)."""
+    """Initialize database with tables"""
     conn = get_connection()
     cursor = conn.cursor()
     
-    # 1. Tabel Users (Untuk login Dosen dan Mahasiswa)
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        role TEXT CHECK(role IN ('dosen', 'mahasiswa')) NOT NULL,
-        nama_lengkap TEXT NOT NULL
-    )
-    """)
+    # Create Users table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            role TEXT NOT NULL,
+            nama TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
     
-    # 2. Tabel Absensi
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS absensi (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        mahasiswa_id INTEGER NOT NULL,
-        tanggal TEXT NOT NULL,
-        waktu TEXT NOT NULL,
-        status TEXT CHECK(status IN ('Hadir', 'Izin', 'Sakit', 'Alpa')) NOT NULL,
-        keterangan TEXT,
-        FOREIGN KEY (mahasiswa_id) REFERENCES users(id) ON DELETE CASCADE
-    )
-    """)
+    # Create Absensi table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS absensi (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            tanggal DATE NOT NULL,
+            jam_masuk TIME,
+            jam_pulang TIME,
+            status TEXT DEFAULT 'hadir',
+            keterangan TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            UNIQUE(user_id, tanggal)
+        )
+    ''')
     
-    # 3. Membuat Akun Demo Otomatis jika database masih kosong (Seeding)
-    cursor.execute("SELECT COUNT(*) FROM users")
-    if cursor.fetchone()[0] == 0:
-        # Password idealnya di-hash (misal menggunakan bcrypt), ini versi teks dasar untuk inisialisasi awal
-        demo_users = [
-            ('dosen1', 'pass123', 'dosen', 'Dr. Budi Santoso'),
-            ('mhs1', 'mhs123', 'mahasiswa', 'Rian Hidayat'),
-            ('mhs2', 'mhs123', 'mahasiswa', 'Siti Aminah')
-        ]
-        cursor.executemany("""
-        INSERT INTO users (username, password, role, nama_lengkap) 
-        VALUES (?, ?, ?, ?)
-        """, demo_users)
-        print("[INFO] Database kosong. Akun demo berhasil dibuat!")
-
     conn.commit()
     conn.close()
-    print("[SUCCESS] Inisialisasi database selesai.")
+
+def insert_default_data():
+    """Insert default users"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Check if data already exists
+        cursor.execute("SELECT COUNT(*) FROM users")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute('''
+                INSERT INTO users (username, password, role, nama)
+                VALUES (?, ?, ?, ?)
+            ''', ('dosen1', '123456', 'dosen', 'Dr. Saeful'))
+            
+            cursor.execute('''
+                INSERT INTO users (username, password, role, nama)
+                VALUES (?, ?, ?, ?)
+            ''', ('mahasiswa1', '123456', 'mahasiswa', 'Andi Pratama'))
+            
+            cursor.execute('''
+                INSERT INTO users (username, password, role, nama)
+                VALUES (?, ?, ?, ?)
+            ''', ('mahasiswa2', '123456', 'mahasiswa', 'Siti Nurhaliza'))
+            
+            conn.commit()
+    except sqlite3.IntegrityError:
+        pass
+    finally:
+        conn.close()
 
 if __name__ == "__main__":
-    # Menjalankan fungsi ini langsung jika file database.py dieksekusi
     init_database()
+    insert_default_data()
+    print("Database initialized successfully!")

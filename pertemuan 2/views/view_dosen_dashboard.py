@@ -4,7 +4,6 @@ from theme import AppTheme
 class AccordionRow(ctk.CTkFrame):
     """Komponen tiruan Headless UI Disclosure (Accordion) dengan warna solid premium."""
     def __init__(self, parent, data, bg_color):
-        # Menggunakan warna solid terdefinisi guna menghindari bug rendering teks hilang
         super().__init__(parent, fg_color=bg_color, corner_radius=12)
         self.data = data
         self.is_open = False
@@ -18,8 +17,8 @@ class AccordionRow(ctk.CTkFrame):
         self.button_frame.grid(row=0, column=0, sticky="ew", padx=16, pady=14)
         self.button_frame.grid_columnconfigure(0, weight=1)
 
-        # Cap Tanggal dan Nama Mahasiswa (Kiri)
-        title_text = f"[{data['tanggal']}]   {data['nama_lengkap']}"
+        # Mengubah data['nama_lengkap'] menjadi data['nama'] sesuai DB mentor
+        title_text = f"[{data['tanggal']}]   {data['nama']}"
         self.title_label = ctk.CTkLabel(
             self.button_frame, 
             text=title_text, 
@@ -56,13 +55,14 @@ class AccordionRow(ctk.CTkFrame):
         self.panel_frame = ctk.CTkFrame(self, fg_color="transparent")
         
         ket_txt = data.get('keterangan') or "Tidak ada catatan tambahan."
-        detail_text = f"Jam Presensi : {data['waktu']}\nKeterangan   : {ket_txt}"
+        # Mengubah data['waktu'] menjadi data['jam_masuk'] sesuai DB mentor
+        detail_text = f"Jam Presensi : {data['jam_masuk']}\nKeterangan   : {ket_txt}"
         
         self.detail_label = ctk.CTkLabel(
             self.panel_frame, 
             text=detail_text, 
             font=("Segoe UI", 12), 
-            text_color="#94a3b8", # Pengganti text-white/50 yang stabil
+            text_color="#94a3b8",
             justify="left",
             anchor="w"
         )
@@ -82,13 +82,11 @@ class AccordionRow(ctk.CTkFrame):
 
 class ViewDosenDashboard(ctk.CTkFrame):
     def __init__(self, parent, user, controller_report, on_logout):
-        # Disetel menggunakan warna latar belakang solid agar teks putih menyala tajam
         super().__init__(parent, fg_color="#0f172a") 
         self.user = user
         self.report = controller_report
         self.on_logout = on_logout
 
-        # Mengunci keseimbangan layout vertikal
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(2, weight=1)
 
@@ -105,7 +103,8 @@ class ViewDosenDashboard(ctk.CTkFrame):
         info_frame.grid(row=0, column=0, sticky="w", padx=20)
         
         ctk.CTkLabel(info_frame, text="DASHBOARD DOSEN", font=("Segoe UI", 18, "bold"), text_color="#ffffff").grid(row=0, column=0, sticky="w")
-        ctk.CTkLabel(info_frame, text=f"Dosen Aktif: {self.user['nama_lengkap']}", font=("Segoe UI", 12), text_color="#94a3b8").grid(row=1, column=0, sticky="w", pady=(2, 0))
+        # Mengubah self.user['nama_lengkap'] menjadi self.user['nama'] sesuai DB mentor
+        ctk.CTkLabel(info_frame, text=f"Dosen Aktif: {self.user['nama']}", font=("Segoe UI", 12), text_color="#94a3b8").grid(row=1, column=0, sticky="w", pady=(2, 0))
 
         logout_btn = ctk.CTkButton(
             header, text="Keluar", command=self.on_logout,
@@ -142,7 +141,6 @@ class ViewDosenDashboard(ctk.CTkFrame):
             text_color="#f8fafc"
         ).grid(row=0, column=0, sticky="w", pady=(0, 10))
 
-        # DIKUNCI: Ditambahkan batas ukuran minimal agar area scroll tidak menyusut jadi 0
         self.scroll_list = ctk.CTkScrollableFrame(
             accordion_container, 
             fg_color="#1e293b", 
@@ -167,7 +165,6 @@ class ViewDosenDashboard(ctk.CTkFrame):
         """Memproses kompilasi baris data absensi ke antarmuka."""
         data_laporan = self.report.dapatkan_laporan_dosen()
 
-        # Pembersihan total komponen lama
         for widget in self.scroll_list.winfo_children():
             widget.destroy()
 
@@ -182,7 +179,6 @@ class ViewDosenDashboard(ctk.CTkFrame):
             return
 
         for idx, row in enumerate(data_laporan):
-            # Pola warna baris berselang-seling yang kokoh (Zebra line style)
             bg_row = "#111827" if idx % 2 == 0 else "#1f2937"
             
             row_accordion = AccordionRow(self.scroll_list, row, bg_row)

@@ -22,7 +22,8 @@ class ControllerAuth:
             self.current_user = user
             return {
                 "status": "success", 
-                "message": f"Selamat datang, {user['nama_lengkap']}!",
+                # DIUBAH: Menggunakan ['nama'] dari database mentor untuk menghindari KeyError
+                "message": f"Selamat datang, {user['nama']}!",
                 "user": user
             }
         
